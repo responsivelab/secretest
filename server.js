@@ -7,7 +7,12 @@ const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' }, maxHttpBufferSize: 20e6 });
+const io = new Server(server, {
+  cors: { origin: '*' },
+  maxHttpBufferSize: 20e6,
+  pingTimeout: 60000,       // aspetta 60s prima di dichiarare la connessione morta
+  pingInterval: 25000,      // manda un ping ogni 25s per tenere viva la sessione
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -24,28 +29,6 @@ let sessionTokens    = {};
 let messages         = [];
 let deleteTimers     = {};
 
-// ─── Log giornaliero ──────────────────────────────────────────────────────────
-const LOGS_DIR = path.join(__dirname, 'logs');
-if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR);
-
-function getTodayLogPath() {
-  const n = new Date();
-  const y = n.getFullYear();
-  const m = String(n.getMonth() + 1).padStart(2, '0');
-  const d = String(n.getDate()).padStart(2, '0');
-  return path.join(LOGS_DIR, `${y}${m}${d}-log.txt`);
-}
-
-function writeLog(userName, text, type) {
-  try {
-    const t = new Date().toTimeString().substring(0, 8);
-    const entry = type === 'image'
-      ? `[${t}] ${userName}: [IMMAGINE]\n`
-      : `[${t}] ${userName}: ${text}\n`;
-    fs.appendFileSync(getTodayLogPath(), entry, 'utf8');
-  } catch (e) { console.error('[LOG ERROR]', e.message); }
-}
-
 // ─── live.txt ─────────────────────────────────────────────────────────────────
 function checkLive() {
   try {
@@ -61,7 +44,6 @@ function generateToken() {
 function checkTripleIP() {
   const unique = new Set(Object.values(connectedIPs));
   if (unique.size >= 3) {
-    console.log('[SECURITY] 3 IP distinti:', [...unique]);
     messages = [];
     Object.values(deleteTimers).forEach(t => clearTimeout(t));
     deleteTimers = {};
@@ -94,9 +76,10 @@ app.post('/api/login', (req, res) => {
 
   const pw = password.trim();
 
-  // 1. Password reale → chat
+  // Password reale → chat
   const realUserId = Object.keys(USERS).find(k => USERS[k].password === pw);
   if (realUserId) {
+    // Disconnetti sessione precedente dello stesso utente
     if (connectedSockets[realUserId]) {
       const oldToken = Object.keys(sessionTokens).find(t => sessionTokens[t] === realUserId);
       if (oldToken) delete sessionTokens[oldToken];
@@ -107,16 +90,16 @@ app.post('/api/login', (req, res) => {
     }
     const token = generateToken();
     sessionTokens[token] = realUserId;
+    // Token scade dopo 24h
+    setTimeout(() => { delete sessionTokens[token]; }, 24 * 60 * 60 * 1000);
     return res.json({ access: 'chat', token, userName: USERS[realUserId].name, userId: realUserId });
   }
 
-  // 2. Password esca → decoy
+  // Password esca → decoy
   const decoyUserId = Object.keys(USERS).find(k => USERS[k].decoyPassword === pw);
-  if (decoyUserId) {
-    return res.json({ access: 'decoy' });
-  }
+  if (decoyUserId) return res.json({ access: 'decoy' });
 
-  // 3. Password sbagliata → errore
+  // Password sbagliata
   return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
 });
 
@@ -130,6 +113,13 @@ app.post('/api/logout', (req, res) => {
     delete connectedIPs[uid];
   }
   res.json({ ok: true });
+});
+
+// ─── Rinnova sessione (keepalive HTTP) ────────────────────────────────────────
+app.post('/api/keepalive', (req, res) => {
+  const token = req.headers['x-session-token'];
+  if (token && sessionTokens[token]) return res.json({ ok: true });
+  return res.status(401).json({ error: 'EXPIRED' });
 });
 
 // ─── Socket.io ────────────────────────────────────────────────────────────────
@@ -150,7 +140,6 @@ io.on('connection', (socket) => {
   const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '0.0.0.0';
   connectedIPs[userId] = rawIP.split(',')[0].trim();
 
-  console.log(`[CONNECT] ${userName} | IP: ${connectedIPs[userId]}`);
   checkTripleIP();
   io.emit('user_status', buildStatus());
 
@@ -165,7 +154,6 @@ io.on('connection', (socket) => {
       text, replyTo: data.replyTo || null, timestamp: Date.now(), readAt: null
     };
     messages.push(msg);
-    writeLog(userName, text, 'text');
     io.emit('new_message', sanitizeMsg(msg));
     const otherId = Object.keys(USERS).find(k => k !== userId);
     if (connectedSockets[otherId]) markMessageRead(msgId);
@@ -181,7 +169,6 @@ io.on('connection', (socket) => {
       base64: data.base64, replyTo: data.replyTo || null, timestamp: Date.now(), readAt: null
     };
     messages.push(msg);
-    writeLog(userName, '', 'image');
     io.emit('new_message', sanitizeMsg(msg));
     const otherId = Object.keys(USERS).find(k => k !== userId);
     if (connectedSockets[otherId]) markMessageRead(msgId);
@@ -200,14 +187,12 @@ io.on('connection', (socket) => {
   });
 
   // ── Disconnect ─────────────────────────────────────────────────────────────
-  socket.on('disconnect', () => {
-    console.log(`[DISCONNECT] ${userName}`);
+  socket.on('disconnect', (reason) => {
+    console.log(`[DISCONNECT] ${userName} — ${reason}`);
     if (connectedSockets[userId] === socket.id) {
       delete connectedSockets[userId];
       delete connectedIPs[userId];
     }
-    const t = Object.keys(sessionTokens).find(t => sessionTokens[t] === userId);
-    if (t) delete sessionTokens[t];
     io.emit('user_status', buildStatus());
   });
 });
@@ -244,4 +229,4 @@ function buildStatus() {
   return s;
 }
 
-server.listen(PORT, '0.0.0.0', () => console.log(`\n✅ SECRETEST attivo su porta ${PORT} | Live: ${checkLive()}\n`));
+server.listen(PORT, '0.0.0.0', () => console.log(`\nServer attivo su porta ${PORT}\n`));

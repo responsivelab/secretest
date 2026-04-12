@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chat</title>
+<title>Bacheca</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -40,28 +40,31 @@
   }
   .status-dot.online { background: var(--green); }
   .other-info { flex: 1; min-width: 0; }
-  .other-name {
-    font-size: 14px; font-weight: 600; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .other-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .other-sub { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
   .my-name-pill {
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 20px; padding: 5px 11px;
     font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap;
   }
-  .btn-exit { display: none; }
   .alert-banner {
-    display: none; background: var(--danger-bg);
-    border-bottom: 2px solid var(--danger);
-    padding: 12px 20px; text-align: center;
-    font-size: 14px; font-weight: 700; color: var(--danger);
-    flex-shrink: 0; animation: alertPulse 1s ease-in-out infinite alternate;
+    display: none; background: var(--danger-bg); border-bottom: 2px solid var(--danger);
+    padding: 12px 20px; text-align: center; font-size: 14px; font-weight: 700;
+    color: var(--danger); flex-shrink: 0; animation: alertPulse 1s ease-in-out infinite alternate;
   }
   .alert-banner.show { display: block; }
-  @keyframes alertPulse {
-    from { background: #fff5f5; } to { background: #ffe0e0; }
+  @keyframes alertPulse { from { background: #fff5f5; } to { background: #ffe0e0; } }
+
+  /* Upload progress bar */
+  .upload-bar {
+    display: none; background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 8px 16px; flex-shrink: 0; align-items: center; gap: 10px;
   }
+  .upload-bar.show { display: flex; }
+  .upload-bar-label { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+  .upload-progress { flex: 1; height: 4px; background: #eee; border-radius: 2px; overflow: hidden; }
+  .upload-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
   #messages {
     flex: 1; overflow-y: auto; padding: 20px 16px;
     display: flex; flex-direction: column; gap: 6px; scroll-behavior: smooth;
@@ -69,183 +72,83 @@
   #messages::-webkit-scrollbar { width: 4px; }
   #messages::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
   .empty-state {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 8px; color: var(--text-dim); font-size: 13px;
-    padding: 40px; text-align: center;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; color: var(--text-dim); font-size: 13px; padding: 40px; text-align: center;
   }
   .empty-icon { font-size: 36px; margin-bottom: 8px; opacity: 0.3; }
   .empty-sub { font-size: 11px; color: #ccc; margin-top: 4px; line-height: 1.6; }
-  .msg-row {
-    display: flex; flex-direction: column; max-width: 70%;
-    animation: msgIn 0.2s ease;
-  }
-  @keyframes msgIn {
-    from { opacity: 0; transform: translateY(6px) scale(0.97); }
-    to   { opacity: 1; transform: none; }
-  }
+  .msg-row { display: flex; flex-direction: column; max-width: 70%; animation: msgIn 0.2s ease; }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
   .msg-row.mine   { align-self: flex-end;  align-items: flex-end; }
   .msg-row.theirs { align-self: flex-start; align-items: flex-start; }
-  .reply-preview {
-    padding: 7px 10px; margin-bottom: 6px; border-radius: 8px;
-    font-size: 12px; line-height: 1.4; max-width: 100%; overflow: hidden;
-  }
-  .msg-row.mine .reply-preview {
-    background: rgba(255,255,255,0.15); border-left: 3px solid rgba(255,255,255,0.5);
-    color: rgba(255,255,255,0.75);
-  }
-  .msg-row.theirs .reply-preview {
-    background: #f0f0f0; border-left: 3px solid #bbb; color: #777;
-  }
+  .reply-preview { padding: 7px 10px; margin-bottom: 6px; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 100%; overflow: hidden; }
+  .msg-row.mine .reply-preview { background: rgba(255,255,255,0.15); border-left: 3px solid rgba(255,255,255,0.5); color: rgba(255,255,255,0.75); }
+  .msg-row.theirs .reply-preview { background: #f0f0f0; border-left: 3px solid #bbb; color: #777; }
   .reply-preview-name { font-weight: 600; font-size: 11px; margin-bottom: 2px; }
   .reply-preview-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .msg-bubble {
-    padding: 10px 14px; font-size: 14px;
-    line-height: 1.5; word-break: break-word; position: relative; cursor: pointer;
-  }
-  .msg-row.mine .msg-bubble {
-    background: var(--me-bg); color: var(--me-text);
-    border-radius: var(--radius) var(--radius) 4px var(--radius);
-  }
-  .msg-row.theirs .msg-bubble {
-    background: var(--them-bg); color: var(--them-text);
-    border-radius: var(--radius) var(--radius) var(--radius) 4px;
-    border: 1px solid var(--border);
-  }
-  .msg-image {
-    max-width: 220px; max-height: 260px;
-    border-radius: 10px; display: block; cursor: pointer; object-fit: cover;
-  }
+  .msg-bubble { padding: 10px 14px; font-size: 14px; line-height: 1.5; word-break: break-word; position: relative; cursor: pointer; }
+  .msg-row.mine .msg-bubble { background: var(--me-bg); color: var(--me-text); border-radius: var(--radius) var(--radius) 4px var(--radius); }
+  .msg-row.theirs .msg-bubble { background: var(--them-bg); color: var(--them-text); border-radius: var(--radius) var(--radius) var(--radius) 4px; border: 1px solid var(--border); }
+  .msg-image { max-width: 220px; max-height: 260px; border-radius: 10px; display: block; cursor: pointer; object-fit: cover; }
   .msg-row.mine .msg-bubble.img-bubble  { padding: 5px; }
   .msg-row.theirs .msg-bubble.img-bubble { padding: 5px; }
   .msg-bubble::after {
     content: '↩'; position: absolute; top: 50%; transform: translateY(-50%);
-    font-size: 14px; opacity: 0; transition: opacity 0.2s;
-    pointer-events: none; color: var(--text-dim);
+    font-size: 14px; opacity: 0; transition: opacity 0.2s; pointer-events: none; color: var(--text-dim);
   }
   .msg-row.mine .msg-bubble::after   { right: -28px; }
   .msg-row.theirs .msg-bubble::after { left: -28px; }
   .msg-bubble:hover::after { opacity: 0.6; }
-  .msg-meta {
-    display: flex; align-items: center; gap: 6px;
-    margin-top: 3px; font-size: 10px; color: var(--text-dim); padding: 0 4px;
-  }
+  .msg-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 10px; color: var(--text-dim); padding: 0 4px; }
   .msg-row.mine .msg-meta { flex-direction: row-reverse; }
   .read-tick { color: var(--blue); font-size: 11px; }
-  .timer-wrap {
-    display: none; height: 2px; border-radius: 1px;
-    background: #eee; overflow: hidden; margin-top: 4px; width: 100%;
-  }
+  .timer-wrap { display: none; height: 2px; border-radius: 1px; background: #eee; overflow: hidden; margin-top: 4px; width: 100%; }
   .timer-wrap.show { display: block; }
   .timer-fill { height: 100%; background: linear-gradient(90deg, #f87171, #fca5a5); width: 100%; }
   .msg-row.deleting { animation: msgOut 0.4s ease forwards; pointer-events: none; }
-  @keyframes msgOut {
-    0%   { opacity: 1; transform: scale(1); }
-    100% { opacity: 0; transform: scale(0.92); height: 0; margin: 0; padding: 0; overflow: hidden; }
-  }
-  .typing-indicator {
-    display: none; align-self: flex-start;
-    background: var(--white); border: 1px solid var(--border);
-    border-radius: var(--radius) var(--radius) var(--radius) 4px;
-    padding: 10px 14px; gap: 4px; align-items: center; animation: msgIn 0.2s ease;
-  }
+  @keyframes msgOut { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.92); height: 0; margin: 0; padding: 0; overflow: hidden; } }
+  .typing-indicator { display: none; align-self: flex-start; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) var(--radius) 4px; padding: 10px 14px; gap: 4px; align-items: center; animation: msgIn 0.2s ease; }
   .typing-indicator.show { display: flex; }
-  .typing-dot {
-    width: 5px; height: 5px; background: var(--text-dim);
-    border-radius: 50%; animation: bounce 1.2s ease-in-out infinite;
-  }
+  .typing-dot { width: 5px; height: 5px; background: var(--text-dim); border-radius: 50%; animation: bounce 1.2s ease-in-out infinite; }
   .typing-dot:nth-child(2) { animation-delay: 0.2s; }
   .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-    30%           { transform: translateY(-5px); opacity: 1; }
-  }
-  .reply-bar {
-    display: none; background: var(--white);
-    border-top: 1px solid var(--border);
-    padding: 8px 14px; align-items: center; gap: 10px; flex-shrink: 0;
-  }
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .reply-bar { display: none; background: var(--white); border-top: 1px solid var(--border); padding: 8px 14px; align-items: center; gap: 10px; flex-shrink: 0; }
   .reply-bar.show { display: flex; }
   .reply-bar-icon { font-size: 16px; color: var(--text-dim); flex-shrink: 0; }
   .reply-bar-content { flex: 1; min-width: 0; }
   .reply-bar-name { font-size: 11px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
   .reply-bar-text { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .reply-bar-close { background: none; border: none; font-size: 18px; color: var(--text-dim); cursor: pointer; padding: 4px; flex-shrink: 0; }
-  .input-area {
-    background: var(--white); border-top: 1px solid var(--border);
-    padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom));
-    display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0;
-  }
-  .btn-exit-bottom {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: var(--bg); border: 1.5px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; transition: all 0.15s; font-size: 16px; color: var(--text-dim);
-  }
+  .input-area { background: var(--white); border-top: 1px solid var(--border); padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .btn-exit-bottom { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.15s; font-size: 16px; color: var(--text-dim); }
   .btn-exit-bottom:hover { border-color: var(--danger); color: var(--danger); background: #fff0f0; }
   .btn-exit-bottom:active { transform: scale(0.93); }
-  .btn-image {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: var(--bg); border: 1.5px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; transition: all 0.15s; color: var(--text-dim);
-  }
+  .btn-image { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.15s; color: var(--text-dim); }
   .btn-image:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
   .btn-image:active { transform: scale(0.93); }
   .btn-image svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   #imgInput { display: none; }
-  #msgInput {
-    flex: 1; background: var(--bg); border: 1.5px solid var(--border);
-    border-radius: 22px; padding: 10px 16px; font-size: 14px;
-    font-family: inherit; color: var(--text); outline: none; resize: none;
-    min-height: 42px; max-height: 120px; line-height: 1.5;
-    transition: border-color 0.15s; overflow-y: auto;
-  }
+  #msgInput { flex: 1; background: var(--bg); border: 1.5px solid var(--border); border-radius: 22px; padding: 10px 16px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; resize: none; min-height: 42px; max-height: 120px; line-height: 1.5; transition: border-color 0.15s; overflow-y: auto; }
   #msgInput:focus { border-color: #bbb; }
   #msgInput::placeholder { color: #bbb; }
   #msgInput::-webkit-scrollbar { width: 3px; }
-  .send-btn {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: var(--accent); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: transform 0.1s, background 0.15s;
-  }
+  .send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.1s, background 0.15s; }
   .send-btn:hover  { background: #333; }
   .send-btn:active { transform: scale(0.93); }
   .send-btn:disabled { background: #ddd; cursor: not-allowed; }
   .send-btn svg { width: 17px; height: 17px; fill: #fff; }
-  .autodel-note {
-    text-align: center; font-size: 10px; color: #ccc;
-    padding: 5px 0 2px; background: var(--white); flex-shrink: 0;
-  }
-  .lightbox {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.9); z-index: 200;
-    align-items: center; justify-content: center;
-  }
+  .autodel-note { text-align: center; font-size: 10px; color: #ccc; padding: 5px 0 2px; background: var(--white); flex-shrink: 0; }
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
   .lightbox.show { display: flex; }
   .lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
-  .lightbox-close {
-    position: absolute; top: 16px; right: 16px;
-    background: rgba(255,255,255,0.15); border: none; color: #fff;
-    font-size: 22px; width: 40px; height: 40px; border-radius: 50%;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
-  .lock-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(255,255,255,0.96); z-index: 1000;
-    flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px; text-align: center; padding: 40px;
-  }
+  .lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.15); border: none; color: #fff; font-size: 22px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lock-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.96); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 40px; }
   .lock-overlay.show { display: flex; }
   .lock-overlay .lock-icon { font-size: 48px; }
   .lock-overlay h2 { font-size: 18px; font-weight: 700; color: var(--danger); }
   .lock-overlay p  { font-size: 13px; color: #888; line-height: 1.7; }
-  .btn-back {
-    margin-top: 12px; padding: 11px 28px;
-    background: var(--accent); color: #fff; border: none;
-    border-radius: 10px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer;
-  }
+  .btn-back { margin-top: 12px; padding: 11px 28px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; }
   @media (max-width: 480px) {
     .my-name-pill { display: none; }
     .topbar { padding: 8px 12px; gap: 8px; }
@@ -259,29 +162,29 @@
 <body>
 
 <div class="topbar">
-  <div class="other-avatar" id="otherAvatar">
-    ?<div class="status-dot" id="otherDot"></div>
-  </div>
+  <div class="other-avatar" id="otherAvatar">?<div class="status-dot" id="otherDot"></div></div>
   <div class="other-info">
     <div class="other-name" id="otherName">—</div>
-    <div class="other-sub"  id="otherSub">non connesso</div>
+    <div class="other-sub"  id="otherSub">non disponibile</div>
   </div>
   <div class="my-name-pill" id="myNamePill">...</div>
-  <button class="btn-exit" onclick="doLogout()">Esci</button>
 </div>
 
 <div class="alert-banner" id="alertBanner">⚠️ ATTENZIONE TRE UTENTI CONNESSI</div>
 
+<div class="upload-bar" id="uploadBar">
+  <span class="upload-bar-label">Elaborazione immagine…</span>
+  <div class="upload-progress"><div class="upload-progress-fill" id="uploadFill" style="width:0%"></div></div>
+</div>
+
 <div id="messages">
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">💬</div>
-    <div>Nessun messaggio</div>
-    <div class="empty-sub">I messaggi letti scompaiono dopo 5 minuti.<br>Tocca un messaggio per rispondergli.</div>
+    <div>Nessun contenuto</div>
+    <div class="empty-sub">I contenuti vengono rimossi dopo 5 minuti.<br>Tocca un elemento per rispondere.</div>
   </div>
   <div class="typing-indicator" id="typingIndicator">
-    <div class="typing-dot"></div>
-    <div class="typing-dot"></div>
-    <div class="typing-dot"></div>
+    <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
   </div>
 </div>
 
@@ -296,7 +199,7 @@
 
 <div class="input-area">
   <button class="btn-exit-bottom" onclick="doLogout()" title="Esci">↩</button>
-  <button class="btn-image" onclick="document.getElementById('imgInput').click()" title="Invia immagine">
+  <button class="btn-image" onclick="document.getElementById('imgInput').click()" title="Allega">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
   </button>
   <input type="file" id="imgInput" accept="image/*" onchange="handleImageSelect(event)">
@@ -306,7 +209,7 @@
     <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
   </button>
 </div>
-<div class="autodel-note">I messaggi letti si eliminano dopo 5 minuti</div>
+<div class="autodel-note">I contenuti vengono rimossi automaticamente dopo 5 minuti</div>
 
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
@@ -315,9 +218,9 @@
 
 <div class="lock-overlay" id="lockOverlay">
   <div class="lock-icon">🔒</div>
-  <h2>Sistema non disponibile</h2>
-  <p>La sessione è scaduta o il sistema è bloccato.<br>Torna al login per accedere di nuovo.</p>
-  <button class="btn-back" onclick="goLogin()">Torna al login</button>
+  <h2>Sessione scaduta</h2>
+  <p>La sessione è terminata.<br>Accedi nuovamente per continuare.</p>
+  <button class="btn-back" onclick="goLogin()">Torna all'accesso</button>
 </div>
 
 <script>
@@ -328,7 +231,14 @@
 
   document.getElementById('myNamePill').textContent = myName;
 
-  const socket = io({ auth: { token } });
+  // ── Socket con reconnessione automatica ──────────────────────────────────────
+  const socket = io({
+    auth: { token },
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+  });
 
   let msgMap     = {};
   let timerMap   = {};
@@ -339,6 +249,17 @@
   let notifCount  = 0;
   let titleInterval = null;
   const originalTitle = document.title;
+  let isUploading = false;
+
+  // ── Keepalive HTTP ogni 4 minuti per evitare che la sessione cada ────────────
+  setInterval(async () => {
+    try {
+      const res = await fetch('/api/keepalive', {
+        method: 'POST', headers: { 'x-session-token': token }
+      });
+      if (!res.ok) showLock();
+    } catch {}
+  }, 4 * 60 * 1000);
 
   function triggerSecretNotif() {
     if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 120]);
@@ -365,9 +286,15 @@
     }
   });
 
+  socket.on('connect', () => {
+    // Alla riconnessione ri-annuncia lo stato
+  });
+
   socket.on('connect_error', (e) => {
     if (e.message === 'UNAUTHORIZED' || e.message === 'SITE_LOCKED') showLock();
+    // Per altri errori lascia che socket.io riprovi da solo
   });
+
   socket.on('site_locked', () => showLock());
 
   socket.on('triple_ip_warning', () => {
@@ -383,7 +310,7 @@
     const name   = s[otherId + '_name'] || '—';
     document.getElementById('otherAvatar').childNodes[0].textContent = name.charAt(0);
     document.getElementById('otherName').textContent = name;
-    document.getElementById('otherSub').textContent  = online ? 'online' : 'non connesso';
+    document.getElementById('otherSub').textContent  = online ? 'disponibile' : 'non disponibile';
     document.getElementById('otherDot').classList.toggle('online', online);
   });
 
@@ -434,7 +361,7 @@
     }
     let bubbleContent;
     if (msg.type === 'image') {
-      bubbleContent = `<img class="msg-image" src="${msg.base64}" alt="immagine" onclick="openLightbox('${msg.id}')">`;
+      bubbleContent = `<img class="msg-image" src="${msg.base64}" alt="" onclick="openLightbox('${msg.id}')">`;
     } else {
       bubbleContent = escHtml(msg.text || '');
     }
@@ -498,17 +425,75 @@
     clearReply(); stopTyping();
   }
 
+  // ── Gestione immagine con compressione per evitare blocco UI ─────────────────
   function handleImageSelect(e) {
     const file = e.target.files[0];
+    e.target.value = ''; // reset subito così non si blocca
     if (!file || !file.type.startsWith('image/')) return;
-    if (file.size > 15 * 1024 * 1024) { alert('Immagine troppo grande (max 15MB)'); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      socket.emit('send_image', { base64: ev.target.result, replyTo: replyTarget });
-      clearReply();
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    if (isUploading) return;
+
+    isUploading = true;
+    showUploadBar(10);
+
+    // Usiamo setTimeout per non bloccare il thread UI
+    setTimeout(() => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        showUploadBar(40);
+        URL.revokeObjectURL(objectUrl);
+
+        // Comprimi: max 1200px lato lungo, qualità 0.82
+        const MAX = 1200;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else                { width  = Math.round(width  * MAX / height); height = MAX; }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        showUploadBar(80);
+
+        // toBlob è asincrono → non blocca
+        canvas.toBlob((blob) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            showUploadBar(100);
+            setTimeout(() => {
+              socket.emit('send_image', { base64: ev.target.result, replyTo: replyTarget });
+              clearReply();
+              hideUploadBar();
+              isUploading = false;
+            }, 200);
+          };
+          reader.readAsDataURL(blob);
+        }, 'image/jpeg', 0.82);
+      };
+
+      img.onerror = () => {
+        hideUploadBar();
+        isUploading = false;
+        URL.revokeObjectURL(objectUrl);
+      };
+
+      img.src = objectUrl;
+    }, 50);
+  }
+
+  function showUploadBar(pct) {
+    document.getElementById('uploadBar').classList.add('show');
+    document.getElementById('uploadFill').style.width = pct + '%';
+  }
+
+  function hideUploadBar() {
+    document.getElementById('uploadBar').classList.remove('show');
+    document.getElementById('uploadFill').style.width = '0%';
   }
 
   function openLightbox(msgId) {
@@ -541,28 +526,17 @@
     if (isTyping) { isTyping = false; socket.emit('typing', { isTyping: false }); }
   }
 
-  function scrollBottom() {
-    const el = document.getElementById('messages');
-    el.scrollTop = el.scrollHeight;
-  }
-
-  function hideEmpty() {
-    const e = document.getElementById('emptyState');
-    if (e) e.style.display = 'none';
-  }
+  function scrollBottom() { const el = document.getElementById('messages'); el.scrollTop = el.scrollHeight; }
+  function hideEmpty() { const e = document.getElementById('emptyState'); if (e) e.style.display = 'none'; }
 
   function escHtml(t) {
     const escaped = (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const linked = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;word-break:break-all;">$1</a>');
+    const linked  = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;word-break:break-all;">$1</a>');
     return linked.replace(/\n/g,'<br>');
   }
 
-  function showLock() {
-    document.getElementById('lockOverlay').classList.add('show');
-    sessionStorage.clear();
-  }
-
-  function goLogin() { window.location.href = '/'; }
+  function showLock() { document.getElementById('lockOverlay').classList.add('show'); sessionStorage.clear(); }
+  function goLogin()  { window.location.href = '/'; }
 
   async function doLogout() {
     stopTyping();
