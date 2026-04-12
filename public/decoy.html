@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lista</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f7f7f7; font-family: 'Inter', sans-serif; color: #1a1a1a; min-height: 100vh; }
+  .topbar {
+    background: #fff; border-bottom: 1px solid #eee;
+    padding: 16px 18px; position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .topbar h1 { font-size: 18px; font-weight: 600; flex: 1; }
+  .tab-bar {
+    display: flex; background: #fff;
+    border-bottom: 1px solid #eee; padding: 0 18px; gap: 4px;
+  }
+  .tab {
+    padding: 10px 14px; font-size: 13px; font-weight: 500;
+    color: #999; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s;
+  }
+  .tab.active { color: #111; border-bottom-color: #111; }
+  .content { max-width: 520px; margin: 0 auto; padding: 16px; }
+  .progress-wrap {
+    background: #fff; border: 1px solid #eee; border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 20px;
+  }
+  .progress-head { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-bottom: 8px; }
+  .progress-head span:first-child { font-weight: 600; color: #111; }
+  .progress-bar { height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #111; border-radius: 3px; transition: width 0.3s; }
+  .item {
+    background: #fff; border: 1px solid #eee; border-radius: 12px;
+    padding: 13px 14px; display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 8px; cursor: pointer; transition: background 0.1s; user-select: none;
+  }
+  .item:active { background: #f9f9f9; }
+  .item.done { opacity: 0.45; }
+  .checkbox {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+    border: 2px solid #ddd; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; margin-top: 1px;
+  }
+  .item.done .checkbox { background: #111; border-color: #111; }
+  .checkbox svg { display: none; width: 11px; height: 11px; stroke: #fff; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .item.done .checkbox svg { display: block; }
+  .item-body { flex: 1; min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 500; color: #111; line-height: 1.4; }
+  .item.done .item-name { text-decoration: line-through; color: #aaa; }
+  .item-detail { font-size: 12px; color: #aaa; margin-top: 3px; line-height: 1.4; }
+  .item-badge { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; margin-top: 2px; align-self: center; }
+  .badge-amz  { background: #fff3cd; color: #856404; }
+  .badge-casa { background: #e8f4fd; color: #0a6ebd; }
+  .badge-cibo { background: #f0fdf4; color: #166534; }
+  .badge-prio { background: #fef2f2; color: #991b1b; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .fab {
+    position: fixed; bottom: 24px; right: 20px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #111; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2); transition: transform 0.15s;
+  }
+  .fab:active { transform: scale(0.93); }
+  .fab svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #fff; width: 100%; max-width: 520px; border-radius: 20px 20px 0 0; padding: 20px 20px 36px; }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .modal input, .modal select {
+    width: 100%; padding: 12px 14px; border: 1.5px solid #eee;
+    border-radius: 10px; font-size: 14px; font-family: inherit;
+    outline: none; margin-bottom: 12px; background: #fafafa;
+  }
+  .modal input:focus, .modal select:focus { border-color: #111; background: #fff; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-btns button { flex: 1; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer; border: none; }
+  .btn-cancel { background: #f5f5f5; color: #555; }
+  .btn-add-ok { background: #111; color: #fff; }
+</style>
+</head>
+<body>
+<div class="topbar"><h1>📋 Le mie liste</h1></div>
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('casa')">🏠 Casa</div>
+  <div class="tab" onclick="switchTab('amazon')">📦 Amazon</div>
+  <div class="tab" onclick="switchTab('spesa')">🛒 Spesa</div>
+</div>
+<div class="content">
+  <div class="tab-panel active" id="tab-casa">
+    <div class="progress-wrap" id="prog-casa"></div>
+    <div id="list-casa"></div>
+  </div>
+  <div class="tab-panel" id="tab-amazon">
+    <div class="progress-wrap" id="prog-amazon"></div>
+    <div id="list-amazon"></div>
+  </div>
+  <div class="tab-panel" id="tab-spesa">
+    <div class="progress-wrap" id="prog-spesa"></div>
+    <div id="list-spesa"></div>
+  </div>
+</div>
+<button class="fab" onclick="openModal()">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalIfOutside(event)">
+  <div class="modal">
+    <h3>Aggiungi elemento</h3>
+    <input type="text" id="newItemName" placeholder="Cosa devi fare o comprare…">
+    <input type="text" id="newItemDetail" placeholder="Note (opzionale)…">
+    <select id="newItemTab">
+      <option value="casa">🏠 Casa</option>
+      <option value="amazon">📦 Amazon</option>
+      <option value="spesa">🛒 Spesa</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Annulla</button>
+      <button class="btn-add-ok" onclick="addItem()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+<script>
+const DEFAULTS = {
+  casa: [
+    { id:1,  name:'Pulire il forno',                    detail:'Usare lo sgrassante, lasciarlo agire 20 min',   badge:'prio', done:false },
+    { id:2,  name:'Cambiare filtro cappa cucina',        detail:'Filtro grasso, da sostituire ogni 3 mesi',     badge:'casa', done:false },
+    { id:3,  name:'Lavare le tende del soggiorno',       detail:'Ciclo delicati 30°, stendere subito',          badge:'casa', done:true  },
+    { id:4,  name:'Sostituire lampadina corridoio',      detail:'E27, 9W luce calda 3000K',                    badge:'casa', done:false },
+    { id:5,  name:'Candeggina negli scarichi del bagno', detail:'Una volta a settimana per evitare cattivi odori',badge:'casa',done:true  },
+    { id:6,  name:'Sistemare il letto che cigola',       detail:'Controllare e stringere le viti del telaio',   badge:'prio', done:false },
+    { id:7,  name:'Comprare nuovo tappeto ingresso',     detail:'Quello attuale è consumato ai bordi',          badge:'prio', done:false },
+    { id:8,  name:'Riordinare l\'armadio della camera',  detail:'Mettere via i vestiti invernali',              badge:'casa', done:false },
+    { id:9,  name:'Pulire il frigorifero dentro',        detail:'Svuotarlo e lavare i ripiani con acqua calda', badge:'casa', done:false },
+    { id:10, name:'Cambiare le pile del telecomando',    detail:'Stilo AA x2',                                 badge:'casa', done:true  },
+  ],
+  amazon: [
+    { id:20, name:'Cuffie Bluetooth Sony WH-1000XM5',   detail:'€279 · Cancellazione rumore · ⭐ 4.7',        badge:'amz',  done:false },
+    { id:21, name:'Caricatore USB-C 65W Anker GaN',      detail:'€35 · Carica 3 dispositivi insieme · ⭐ 4.6', badge:'amz',  done:false },
+    { id:22, name:'Organizer cassetti cucina in bambù',  detail:'€18 · Set 6 pezzi · ⭐ 4.5',                 badge:'amz',  done:true  },
+    { id:23, name:'Copriwater universale Wenko',         detail:'€22 · Bianco · Chiusura soft-close',          badge:'amz',  done:false },
+    { id:24, name:'Telo doccia antimuffa 180x200',       detail:'€14 · Bianco · Lavabile in lavatrice · ⭐ 4.4',badge:'amz', done:false },
+    { id:25, name:'Bilancia cucina digitale Etekcity',   detail:'€12 · Portata 5kg · Precisione 1g',           badge:'amz',  done:false },
+    { id:26, name:'Lampada scrivania LED con USB',       detail:'€34 · Con ricarica wireless integrata · ⭐ 4.5',badge:'amz', done:true  },
+    { id:27, name:'Spray impermeabilizzante scarpe',     detail:'€11 · Collonil Carbon Pro · Per tutte le scarpe',badge:'amz',done:false},
+    { id:28, name:'Set coltelli cucina Victorinox',      detail:'€45 · 5 pezzi · Manico ergonomico · ⭐ 4.8',  badge:'amz',  done:false },
+    { id:29, name:'Contenitori sottovuoto per cibo',     detail:'€24 · Set 10 pezzi · Compatibili lavastoviglie',badge:'amz',done:false },
+  ],
+  spesa: [
+    { id:40, name:'Passata di pomodoro × 6 barattoli',  detail:'Mutti o Valfrutta, formato grande',            badge:'cibo', done:false },
+    { id:41, name:'Parmigiano Reggiano 24 mesi',         detail:'Pezzo intero dal banco gastronomia',           badge:'cibo', done:false },
+    { id:42, name:'Olio extravergine di oliva 1L',       detail:'Bottiglia grande, marca Monini o simile',      badge:'cibo', done:true  },
+    { id:43, name:'Farina 00 da 1kg',                   detail:'Per fare la pizza del weekend',                badge:'cibo', done:false },
+    { id:44, name:'Detersivo lavatrice Dash Pods 3in1',  detail:'Confezione da 30 pastiglie',                  badge:'casa', done:false },
+    { id:45, name:'Carta igienica 12 rotoli',            detail:'Morbidissima, triplo velo',                   badge:'casa', done:false },
+    { id:46, name:'Latte intero × 4 litri',             detail:'Brick da 1L, marca Granarolo',                 badge:'cibo', done:true  },
+    { id:47, name:'Yogurt greco naturale',               detail:'2 vasetti da 500g, Fage o Total',              badge:'cibo', done:false },
+    { id:48, name:'Prosciutto cotto 200g',               detail:'Affettato fino al banco salumeria',            badge:'cibo', done:false },
+    { id:49, name:'Sapone liquido mani × 2',            detail:'Palmolive o Lysoform antibatterico',           badge:'casa', done:false },
+    { id:50, name:'Pasta di semola 500g × 4',           detail:'Barilla spaghetti e rigatoni',                 badge:'cibo', done:false },
+  ]
+};
+
+const BADGE_LABELS = { amz:'📦 Amazon', casa:'🏠 Casa', cibo:'🥦 Cibo', prio:'❗ Urgente' };
+
+let data = {};
+try { data = JSON.parse(localStorage.getItem('_lista_v3') || 'null') || DEFAULTS; } catch { data = DEFAULTS; }
+
+let currentTab = 'casa';
+let nextId = 200;
+
+function save() { localStorage.setItem('_lista_v3', JSON.stringify(data)); }
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['casa','amazon','spesa'][i] === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('newItemTab').value = tab;
+}
+
+function renderAll() { ['casa','amazon','spesa'].forEach(t => renderTab(t)); }
+
+function renderTab(tab) {
+  const items = data[tab] || [];
+  const done  = items.filter(i => i.done).length;
+  const total = items.length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('prog-' + tab).innerHTML = `
+    <div class="progress-head"><span>${done} di ${total} completati</span><span>${pct}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+  `;
+  const container = document.getElementById('list-' + tab);
+  container.innerHTML = '';
+  const sorted = [...items.filter(i => !i.done), ...items.filter(i => i.done)];
+  sorted.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'item' + (item.done ? ' done' : '');
+    div.innerHTML = `
+      <div class="checkbox"><svg viewBox="0 0 12 10"><polyline points="1 5 4 8 11 1"/></svg></div>
+      <div class="item-body">
+        <div class="item-name">${escHtml(item.name)}</div>
+        ${item.detail ? `<div class="item-detail">${escHtml(item.detail)}</div>` : ''}
+      </div>
+      ${item.badge ? `<div class="item-badge badge-${item.badge}">${BADGE_LABELS[item.badge]||''}</div>` : ''}
+    `;
+    div.addEventListener('click', () => toggleItem(tab, item.id));
+    container.appendChild(div);
+  });
+}
+
+function toggleItem(tab, id) {
+  const item = data[tab].find(i => i.id === id);
+  if (item) { item.done = !item.done; save(); renderTab(tab); }
+}
+
+function openModal() {
+  document.getElementById('newItemTab').value = currentTab;
+  document.getElementById('newItemName').value = '';
+  document.getElementById('newItemDetail').value = '';
+  document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('newItemName').focus(), 100);
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+function closeModalIfOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+function addItem() {
+  const name   = document.getElementById('newItemName').value.trim();
+  const detail = document.getElementById('newItemDetail').value.trim();
+  const tab    = document.getElementById('newItemTab').value;
+  if (!name) return;
+  data[tab].unshift({ id: nextId++, name, detail, badge: tab === 'amazon' ? 'amz' : tab === 'spesa' ? 'cibo' : 'casa', done: false });
+  save(); renderTab(tab); closeModal();
+  if (tab !== currentTab) switchTab(tab);
+}
+
+document.getElementById('newItemName').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+function escHtml(t) { return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+renderAll();
+</script>
+</body>
+</html>
