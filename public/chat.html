@@ -16,6 +16,31 @@
     --danger: #d00000; --danger-bg: #fff5f5;
     --green: #22c55e; --blue: #3b82f6; --radius: 18px;
   }
+
+  /* ── TEMA DARK: entrambi connessi ────────────────────────────────────────── */
+  body.both-online {
+    --bg: #111111; --white: #1a1a1a; --border: #2a2a2a;
+    --text: #eeeeee; --text-dim: #666666; --accent: #eeeeee;
+    --me-bg: #ffffff; --me-text: #111111;
+    --them-bg: #1e1e1e; --them-text: #eeeeee;
+    transition: background 0.6s ease, color 0.6s ease;
+  }
+
+  body { transition: background 0.6s ease; }
+
+  /* fix scrollbar in dark */
+  body.both-online #messages::-webkit-scrollbar-thumb { background: #333; }
+  body.both-online .status-dot { border-color: #1a1a1a; }
+  body.both-online .msg-row.theirs .msg-bubble { border-color: #2a2a2a; }
+  body.both-online .autodel-note { background: #1a1a1a; }
+  body.both-online .input-area   { background: #1a1a1a; border-top-color: #2a2a2a; }
+  body.both-online #msgInput     { background: #111; border-color: #2a2a2a; color: #eee; }
+  body.both-online #msgInput::placeholder { color: #444; }
+  body.both-online .btn-image, body.both-online .btn-exit-bottom { background: #111; border-color: #2a2a2a; color: #666; }
+  body.both-online .reply-bar    { background: #1a1a1a; border-top-color: #2a2a2a; }
+  body.both-online .upload-bar   { background: #1a1a1a; border-bottom-color: #2a2a2a; }
+  body.both-online .typing-indicator { background: #1e1e1e; border-color: #2a2a2a; }
+  body.both-online .typing-dot   { background: #555; }
   body {
     background: var(--bg); color: var(--text);
     font-family: 'Inter', sans-serif; height: 100vh;
@@ -312,6 +337,8 @@
     document.getElementById('otherName').textContent = name;
     document.getElementById('otherSub').textContent  = online ? 'disponibile' : 'non disponibile';
     document.getElementById('otherDot').classList.toggle('online', online);
+    // Tema dark quando entrambi sono connessi
+    document.body.classList.toggle('both-online', online);
   });
 
   socket.on('new_message', (msg) => {
