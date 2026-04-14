@@ -104,7 +104,16 @@
   .empty-sub { font-size: 11px; color: #ccc; margin-top: 4px; line-height: 1.6; }
   .msg-row { display: flex; flex-direction: column; max-width: 70%; animation: msgIn 0.2s ease; }
   @keyframes msgIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
-  .msg-row.mine   { align-self: flex-end;  align-items: flex-end; }
+  .msg-row.mine .reply-preview {
+    background: rgba(255,255,255,0.12); border-left: 3px solid rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.75);
+  }
+  .msg-row.mine .reply-preview .reply-preview-name {
+    color: rgba(255,255,255,0.9);
+  }
+  .msg-row.mine .reply-preview .reply-preview-text {
+    color: rgba(255,255,255,0.65);
+  }
   .msg-row.theirs { align-self: flex-start; align-items: flex-start; }
   .reply-preview { padding: 7px 10px; margin-bottom: 6px; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 100%; overflow: hidden; }
   .msg-row.mine .reply-preview { background: rgba(255,255,255,0.15); border-left: 3px solid rgba(255,255,255,0.5); color: rgba(255,255,255,0.75); }
