@@ -40,6 +40,40 @@ function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// ─── Notifica email via PHP su andrealeti.it ──────────────────────────────────
+const EMAIL_NOTIFY_URL = 'https://andrealeti.it/secrecha.php';
+const USER_EMAILS = {
+  marco:  'provaprova@gmail.com',
+  andrea: 'assai@gmmail.comm'
+};
+
+async function sendLoginNotify(userId, userName) {
+  try {
+    const now   = new Date();
+    const ora   = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const giorno = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const email = USER_EMAILS[userId];
+    if (!email) return;
+
+    const body = new URLSearchParams({
+      to:      email,
+      user:    userName,
+      time:    ora,
+      date:    giorno
+    });
+
+    const res = await fetch(EMAIL_NOTIFY_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    body.toString(),
+      signal:  AbortSignal.timeout(5000) // timeout 5s, non blocca il login
+    });
+    console.log(`[EMAIL] Notifica inviata a ${email} — HTTP ${res.status}`);
+  } catch (e) {
+    console.log(`[EMAIL] Notifica fallita (non bloccante): ${e.message}`);
+  }
+}
+
 // ─── Controllo 3 IP distinti ──────────────────────────────────────────────────
 function checkTripleIP() {
   const unique = new Set(Object.values(connectedIPs));
@@ -92,6 +126,8 @@ app.post('/api/login', (req, res) => {
     sessionTokens[token] = realUserId;
     // Token scade dopo 24h
     setTimeout(() => { delete sessionTokens[token]; }, 24 * 60 * 60 * 1000);
+    // Notifica email (non bloccante)
+    sendLoginNotify(realUserId, USERS[realUserId].name);
     return res.json({ access: 'chat', token, userName: USERS[realUserId].name, userId: realUserId });
   }
 
