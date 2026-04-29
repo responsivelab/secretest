@@ -132,18 +132,18 @@
   }
   .empty-icon { font-size: 36px; margin-bottom: 8px; opacity: 0.3; }
   .empty-sub { font-size: 11px; color: #ccc; margin-top: 4px; line-height: 1.6; }
-  .msg-row { display: flex; flex-direction: column; max-width: 70%; animation: msgIn 0.2s ease; }
+  .msg-row { display: flex; flex-direction: column; max-width: 70%; min-width: 0; animation: msgIn 0.2s ease; }
   @keyframes msgIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
   .msg-row.mine   { align-self: flex-end;  align-items: flex-end; }
   .msg-row.theirs { align-self: flex-start; align-items: flex-start; }
-  .reply-preview { padding: 7px 10px; margin-bottom: 6px; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 100%; overflow: hidden; }
+  .reply-preview { padding: 7px 10px; margin-bottom: 6px; border-radius: 8px; font-size: 12px; line-height: 1.4; max-width: 100%; overflow: hidden; box-sizing: border-box; }
   .msg-row.mine .reply-preview { background: rgba(255,255,255,0.18); border-left: 3px solid rgba(255,255,255,0.6); color: rgba(255,255,255,0.9); }
   .msg-row.mine .reply-preview .reply-preview-name { color: #ffffff; }
   .msg-row.mine .reply-preview .reply-preview-text { color: rgba(255,255,255,0.75); }
   .msg-row.theirs .reply-preview { background: #f0f0f0; border-left: 3px solid #bbb; color: #777; }
   .reply-preview-name { font-weight: 600; font-size: 11px; margin-bottom: 2px; }
-  .reply-preview-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .msg-bubble { padding: 10px 14px; font-size: 14px; line-height: 1.5; word-break: break-word; position: relative; cursor: pointer; }
+  .reply-preview-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .msg-bubble { padding: 10px 14px; font-size: 14px; line-height: 1.5; word-break: break-word; word-wrap: break-word; overflow-wrap: break-word; position: relative; cursor: pointer; min-width: 0; max-width: 100%; box-sizing: border-box; }
   .msg-row.mine .msg-bubble { background: var(--me-bg); color: var(--me-text); border-radius: var(--radius) var(--radius) 4px var(--radius); }
   .msg-row.theirs .msg-bubble { background: var(--them-bg); color: var(--them-text); border-radius: var(--radius) var(--radius) var(--radius) 4px; border: 1px solid var(--border); }
   .msg-image { max-width: 220px; max-height: 260px; border-radius: 10px; display: block; cursor: pointer; object-fit: cover; }
@@ -202,11 +202,16 @@
   .location-bubble:hover { background: #dcfce7; }
   .location-bubble .loc-icon { font-size: 20px; margin-right: 6px; }
   .location-bubble .loc-text { display: block; font-size: 11px; color: #16a34a; margin-top: 2px; font-weight: 400; }
-  .msg-row.mine .location-bubble { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: #fff; }
-  .msg-row.mine .location-bubble .loc-text { color: rgba(255,255,255,0.7); }
-  .msg-row.mine .location-bubble:hover { background: rgba(255,255,255,0.25); }
-  body.both-online .msg-row.mine .location-bubble { background: rgba(0,128,0,0.12); border-color: rgba(0,200,0,0.3); color: #166534; }
-  body.both-online .msg-row.mine .location-bubble .loc-text { color: #15803d; }
+  /* bolla GPS inviata da me — sfondo nero, testo sempre leggibile */
+  .msg-row.mine .location-bubble { background: #14532d; border-color: #166534; color: #bbf7d0; }
+  .msg-row.mine .location-bubble .loc-text { color: #86efac; }
+  .msg-row.mine .location-bubble:hover { background: #166534; }
+  /* tema dark both-online — bolla mia è bianca, quindi testo verde scuro */
+  body.both-online .msg-row.mine .location-bubble { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+  body.both-online .msg-row.mine .location-bubble .loc-text { color: #16a34a; }
+  /* tema waiting — stessa cosa della bolla mine normale */
+  body.waiting .msg-row.mine .location-bubble { background: #14532d; border-color: #166534; color: #bbf7d0; }
+  body.waiting .msg-row.mine .location-bubble .loc-text { color: #86efac; }
   #imgInput { display: none; }
   #msgInput { flex: 1; background: var(--bg); border: 1.5px solid var(--border); border-radius: 22px; padding: 10px 16px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; resize: none; min-height: 42px; max-height: 120px; line-height: 1.5; transition: border-color 0.15s; overflow-y: auto; }
   #msgInput:focus { border-color: #bbb; }
