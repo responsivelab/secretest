@@ -190,6 +190,23 @@
   .btn-image:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
   .btn-image:active { transform: scale(0.93); }
   .btn-image svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .btn-location { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.15s; font-size: 18px; }
+  .btn-location:hover { border-color: #22c55e; background: #f0fdf4; }
+  .btn-location:active { transform: scale(0.93); }
+  .btn-location.loading { animation: locPulse 1s ease-in-out infinite; border-color: #22c55e; }
+  @keyframes locPulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  body.waiting .btn-location, body.both-online .btn-location { background: #111; border-color: #2a2a2a; }
+
+  .location-bubble { display: block; text-decoration: none; padding: 10px 12px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 13px; font-weight: 500; transition: background 0.15s; }
+  .location-bubble:hover { background: #dcfce7; }
+  .location-bubble .loc-icon { font-size: 20px; margin-right: 6px; }
+  .location-bubble .loc-text { display: block; font-size: 11px; color: #16a34a; margin-top: 2px; font-weight: 400; }
+  .msg-row.mine .location-bubble { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: #fff; }
+  .msg-row.mine .location-bubble .loc-text { color: rgba(255,255,255,0.7); }
+  .msg-row.mine .location-bubble:hover { background: rgba(255,255,255,0.25); }
+  body.both-online .msg-row.mine .location-bubble { background: rgba(0,128,0,0.12); border-color: rgba(0,200,0,0.3); color: #166534; }
+  body.both-online .msg-row.mine .location-bubble .loc-text { color: #15803d; }
   #imgInput { display: none; }
   #msgInput { flex: 1; background: var(--bg); border: 1.5px solid var(--border); border-radius: 22px; padding: 10px 16px; font-size: 14px; font-family: inherit; color: var(--text); outline: none; resize: none; min-height: 42px; max-height: 120px; line-height: 1.5; transition: border-color 0.15s; overflow-y: auto; }
   #msgInput:focus { border-color: #bbb; }
@@ -264,6 +281,7 @@
   <button class="btn-image" onclick="document.getElementById('imgInput').click()" title="Allega">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
   </button>
+  <button class="btn-location" id="locBtn" onclick="shareLocation()" title="Condividi posizione">📍</button>
   <input type="file" id="imgInput" accept="image/*" onchange="handleImageSelect(event)">
   <textarea id="msgInput" placeholder="Scrivi un messaggio…" rows="1"
     onkeydown="handleKey(event)" oninput="handleTyping()"></textarea>
@@ -401,6 +419,14 @@
     startTimer(msgId, 300000);
   });
 
+  socket.on('new_location', (msg) => {
+    hideEmpty(); renderMsg(msg); scrollBottom();
+    if (msg.from !== userId) {
+      socket.emit('mark_read', { msgId: msg.id });
+      triggerSecretNotif();
+    }
+  });
+
   socket.on('delete_message', ({ msgId }) => {
     const el = msgMap[msgId];
     if (!el) return;
@@ -433,6 +459,12 @@
     let bubbleContent;
     if (msg.type === 'image') {
       bubbleContent = `<img class="msg-image" src="${msg.base64}" alt="" onclick="openLightbox('${msg.id}')">`;
+    } else if (msg.type === 'location') {
+      const mapsUrl = `https://www.google.com/maps?q=${msg.lat},${msg.lng}&z=16`;
+      bubbleContent = `<a class="location-bubble" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">
+        <span class="loc-icon">📍</span><strong>Posizione condivisa</strong>
+        <span class="loc-text">Tocca per aprire in Google Maps</span>
+      </a>`;
     } else {
       bubbleContent = escHtml(msg.text || '');
     }
@@ -485,6 +517,34 @@
   function clearReply() {
     replyTarget = null;
     document.getElementById('replyBar').classList.remove('show');
+  }
+
+  // ── Condividi posizione GPS ─────────────────────────────────────────────────
+  function shareLocation() {
+    if (!navigator.geolocation) { alert('GPS non supportato da questo browser.'); return; }
+    const btn = document.getElementById('locBtn');
+    btn.classList.add('loading');
+    btn.style.pointerEvents = 'none';
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        btn.classList.remove('loading');
+        btn.style.pointerEvents = '';
+        socket.emit('send_location', {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          replyTo: replyTarget
+        });
+        clearReply();
+      },
+      (err) => {
+        btn.classList.remove('loading');
+        btn.style.pointerEvents = '';
+        if (err.code === 1) alert('Permesso GPS negato. Abilitalo nelle impostazioni del browser.');
+        else alert('Impossibile ottenere la posizione. Riprova.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   }
 
   function sendMsg() {

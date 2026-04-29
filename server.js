@@ -223,6 +223,27 @@ io.on('connection', (socket) => {
     if (msg && !msg.readAt) markMessageRead(data.msgId);
   });
 
+  // ── Posizione GPS ─────────────────────────────────────────────────────────
+  socket.on('send_location', (data) => {
+    if (!checkLive()) return;
+    if (!data.lat || !data.lng) return;
+    const lat = parseFloat(data.lat);
+    const lng = parseFloat(data.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    // Valida range coordinate
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+    const msgId = crypto.randomBytes(16).toString('hex');
+    const msg = {
+      id: msgId, type: 'location', from: userId, fromName: userName,
+      lat, lng, replyTo: data.replyTo || null, timestamp: Date.now(), readAt: null
+    };
+    messages.push(msg);
+    io.emit('new_message', sanitizeMsg(msg));
+    const otherId = Object.keys(USERS).find(k => k !== userId);
+    if (connectedSockets[otherId]) markMessageRead(msgId);
+  });
+
   // ── Typing ─────────────────────────────────────────────────────────────────
   socket.on('typing', (data) => {
     socket.broadcast.emit('user_typing', { userName, isTyping: data.isTyping });
@@ -258,6 +279,7 @@ function sanitizeMsg(m) {
   return {
     id: m.id, type: m.type, from: m.from, fromName: m.fromName,
     text: m.text || null, base64: m.base64 || null,
+    lat: m.lat || null, lng: m.lng || null,
     replyTo: m.replyTo || null, timestamp: m.timestamp, readAt: m.readAt
   };
 }
