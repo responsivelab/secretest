@@ -158,6 +158,12 @@ app.post('/api/keepalive', (req, res) => {
   return res.status(401).json({ error: 'EXPIRED' });
 });
 
+// ─── Stato connessioni (per la pagina login) ─────────────────────────────────
+app.get('/api/online', (req, res) => {
+  const count = Object.keys(connectedSockets).length;
+  res.json({ anyone: count > 0 });
+});
+
 // ─── Socket.io ────────────────────────────────────────────────────────────────
 io.use((socket, next) => {
   if (!checkLive()) return next(new Error('SITE_LOCKED'));

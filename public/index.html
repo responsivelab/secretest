@@ -10,7 +10,30 @@
   body {
     background: #fff; color: #111; font-family: 'Inter', sans-serif;
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    transition: background 0.8s ease, color 0.8s ease;
   }
+
+  body.someone-online {
+    background: #111;
+    color: #eee;
+  }
+
+  body.someone-online .logo-circle { background: #222; }
+  body.someone-online .logo-circle svg { stroke: #aaa; }
+  body.someone-online h1 { color: #eee; }
+  body.someone-online .subtitle { color: #555; }
+  body.someone-online label { color: #666; }
+  body.someone-online input {
+    background: #1a1a1a; border-color: #2a2a2a;
+    color: #eee;
+  }
+  body.someone-online input:focus { border-color: #444; background: #222; }
+  body.someone-online input::placeholder { color: #444; }
+  body.someone-online .btn { background: #eee; color: #111; }
+  body.someone-online .btn:hover { background: #fff; }
+  body.someone-online .error-box { background: #1a0a00; border-color: #5a2a00; color: #ffaa55; }
+  body.someone-online .footer-note { color: #333; }
+  body.someone-online .links { color: #444; }
   .wrap { width: 100%; max-width: 360px; padding: 24px; }
   .logo { display: flex; justify-content: center; margin-bottom: 40px; }
   .logo-circle {
@@ -130,6 +153,17 @@
     } catch { err.classList.add('show'); }
     finally  { btn.classList.remove('loading'); btn.disabled = false; }
   }
+  // ── Polling: se qualcuno è connesso la pagina diventa nera ──────────────────
+  async function checkOnline() {
+    try {
+      const res  = await fetch('/api/online');
+      const data = await res.json();
+      document.body.classList.toggle('someone-online', data.anyone);
+    } catch {}
+  }
+
+  checkOnline();
+  setInterval(checkOnline, 5000); // controlla ogni 5 secondi
 </script>
 </body>
 </html>
