@@ -122,6 +122,11 @@ app.post('/api/login', (req, res) => {
       delete connectedSockets[realUserId];
       delete connectedIPs[realUserId];
     }
+    // Pulizia RAM ad ogni login
+    messages = [];
+    Object.values(deleteTimers).forEach(t => clearTimeout(t));
+    deleteTimers = {};
+
     const token = generateToken();
     sessionTokens[token] = realUserId;
     // Token scade dopo 24h

@@ -217,8 +217,8 @@
   #msgInput:focus { border-color: #bbb; }
   #msgInput::placeholder { color: #bbb; }
   #msgInput::-webkit-scrollbar { width: 3px; }
-  .send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.1s, background 0.15s; }
-  .send-btn:hover  { background: #333; }
+  .send-btn { width: 42px; height: 42px; border-radius: 50%; background: #22c55e; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.1s, background 0.15s; }
+  .send-btn:hover  { background: #16a34a; }
   .send-btn:active { transform: scale(0.93); }
   .send-btn:disabled { background: #ddd; cursor: not-allowed; }
   .send-btn svg { width: 17px; height: 17px; fill: #fff; }
@@ -673,6 +673,32 @@
 
   function showLock() { document.getElementById('lockOverlay').classList.add('show'); sessionStorage.clear(); }
   function goLogin()  { window.location.href = '/'; }
+
+  // ── Auto-logout dopo 5 minuti di inattività ────────────────────────────────
+  const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minuti
+  let inactivityTimer = null;
+
+  function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      // Logout silenzioso → redirect alla pagina decoy
+      stopTyping();
+      try {
+        fetch('/api/logout', { method: 'POST', headers: { 'x-session-token': token }, keepalive: true });
+      } catch {}
+      sessionStorage.clear();
+      socket.disconnect();
+      window.location.href = '/decoy.html';
+    }, INACTIVITY_LIMIT);
+  }
+
+  // Resetta il timer su qualsiasi interazione
+  ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+
+  // Avvia il timer subito al caricamento
+  resetInactivityTimer();
 
   async function doLogout() {
     stopTyping();
