@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Utenti ───────────────────────────────────────────────────────────────────
 const USERS = {
-  marco:  { name: 'Venus', password: 'server1',  decoyPassword: 'barubaribari'  },
+  marco:  { name: 'Venus', password: 'server1',  decoyPassword: 'baribaribari'  },
   andrea: { name: 'Lyon', password: 'orlando',  decoyPassword: 'Andrealeti83' }
 };
 
