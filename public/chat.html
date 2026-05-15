@@ -223,6 +223,13 @@
   .send-btn:disabled { background: #ddd; cursor: not-allowed; }
   .send-btn svg { width: 17px; height: 17px; fill: #fff; }
   .autodel-note { text-align: center; font-size: 10px; color: #ccc; padding: 5px 0 2px; background: var(--white); flex-shrink: 0; }
+
+  /* Emoji singola — font triplo */
+  .msg-bubble.big-emoji { background: transparent !important; border: none !important; font-size: 48px; line-height: 1.2; padding: 4px 8px; }
+  .msg-row.mine .msg-bubble.big-emoji  { background: transparent !important; }
+  .msg-row.theirs .msg-bubble.big-emoji { background: transparent !important; border: none !important; }
+  body.both-online .msg-bubble.big-emoji { background: transparent !important; border: none !important; }
+  body.waiting .msg-bubble.big-emoji    { background: transparent !important; border: none !important; }
   .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
   .lightbox.show { display: flex; }
   .lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
@@ -461,6 +468,7 @@
         <div class="reply-preview-text">${preview}</div>
       </div>`;
     }
+    const singleEmoji = msg.type === 'text' && isSingleEmoji(msg.text);
     let bubbleContent;
     if (msg.type === 'image') {
       bubbleContent = `<img class="msg-image" src="${msg.base64}" alt="" onclick="openLightbox('${msg.id}')">`;
@@ -474,7 +482,7 @@
       bubbleContent = escHtml(msg.text || '');
     }
     row.innerHTML = `
-      <div class="msg-bubble ${msg.type === 'image' ? 'img-bubble' : ''}" onclick="onBubbleClick('${msg.id}')">
+      <div class="msg-bubble ${msg.type === 'image' ? 'img-bubble' : ''} ${singleEmoji ? 'big-emoji' : ''}" onclick="onBubbleClick('${msg.id}')">
         ${replyHtml}${bubbleContent}
       </div>
       <div class="timer-wrap" id="tw-${msg.id}"><div class="timer-fill" id="tf-${msg.id}"></div></div>
@@ -669,6 +677,14 @@
     const escaped = (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const linked  = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;word-break:break-all;">$1</a>');
     return linked.replace(/\n/g,'<br>');
+  }
+
+  function isSingleEmoji(text) {
+    if (!text) return false;
+    const t = text.trim();
+    // Regex che matcha una singola emoji (anche composte con ZWJ e varianti)
+    const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\u200D(\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*$/u;
+    return emojiRegex.test(t);
   }
 
   function showLock() { document.getElementById('lockOverlay').classList.add('show'); sessionStorage.clear(); }
