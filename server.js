@@ -18,8 +18,8 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Utenti ───────────────────────────────────────────────────────────────────
 const USERS = {
-  marco:  { name: 'Venus', password: 'server1',  decoyPassword: 'Lamialista'  },
-  andrea: { name: 'Lyon', password: 'orlando',  decoyPassword: 'Andrealeti83' }
+  marco:  { name: 'Asterix', password: 'server1',  decoyPassword: 'Valentina87'  },
+  andrea: { name: 'Obelix', password: 'orlando',  decoyPassword: 'Andrealeti83' }
 };
 
 // ─── Stato in memoria ─────────────────────────────────────────────────────────
@@ -278,9 +278,10 @@ function markMessageRead(msgId) {
   io.emit('message_read', { msgId, readAt: msg.readAt });
 
   if (msg.type === 'image' || msg.type === 'location') {
-    // Immagini e GPS: libera la RAM subito, il browser le ha già ricevute
+    // Libera subito la RAM (base64 pesante) — il browser ce l'ha già
     if (msg.base64) msg.base64 = null;
-    deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 5000);
+    // Bolla visiva: 1 minuto
+    deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 60000);
   } else {
     // Testi: 2 minuti
     deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 120000);
