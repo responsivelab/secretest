@@ -18,8 +18,8 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Utenti ───────────────────────────────────────────────────────────────────
 const USERS = {
-  marco:  { name: 'Venus', password: 'server1',  decoyPassword: 'Valentina87'  },
-  andrea: { name: 'Lyonheart', password: 'orlando',  decoyPassword: 'Andrealeti83' }
+  marco:  { name: 'Asterix', password: 'server1',  decoyPassword: 'Valentina87'  },
+  andrea: { name: 'Obelix', password: 'orlando',  decoyPassword: 'Andrealeti83' }
 };
 
 // ─── Stato in memoria ─────────────────────────────────────────────────────────
@@ -213,7 +213,12 @@ io.on('connection', (socket) => {
     messages.push(msg);
     io.emit('new_message', sanitizeMsg(msg));
     const otherId = Object.keys(USERS).find(k => k !== userId);
-    if (connectedSockets[otherId]) markMessageRead(msgId);
+    if (connectedSockets[otherId]) {
+      markMessageRead(msgId);
+    } else {
+      // Altro non connesso: max 10 min poi elimina comunque
+      deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 600000);
+    }
   });
 
   // ── Segna letto ────────────────────────────────────────────────────────────
@@ -266,7 +271,15 @@ function markMessageRead(msgId) {
   if (!msg || msg.readAt) return;
   msg.readAt = Date.now();
   io.emit('message_read', { msgId, readAt: msg.readAt });
-  deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 300000);
+
+  if (msg.type === 'image' || msg.type === 'location') {
+    // Immagini e GPS: libera la RAM subito, il browser le ha già ricevute
+    if (msg.base64) msg.base64 = null;
+    deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 5000);
+  } else {
+    // Testi: 2 minuti
+    deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 120000);
+  }
 }
 
 function deleteMessage(msgId) {

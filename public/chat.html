@@ -266,7 +266,7 @@
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">💬</div>
     <div>Nessun contenuto</div>
-    <div class="empty-sub">I contenuti vengono rimossi dopo 5 minuti.<br>Tocca un elemento per rispondere.</div>
+    <div class="empty-sub">I contenuti vengono rimossi dopo 2 minuti.<br>Tocca un elemento per rispondere.</div>
   </div>
   <div class="typing-indicator" id="typingIndicator">
     <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
@@ -294,7 +294,7 @@
     <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
   </button>
 </div>
-<div class="autodel-note">I contenuti vengono rimossi automaticamente dopo 5 minuti</div>
+<div class="autodel-note">I contenuti vengono rimossi automaticamente dopo 2 minuti</div>
 
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">×</button>
@@ -421,7 +421,7 @@
     if (!el) return;
     const tick = el.querySelector('.read-tick');
     if (tick) tick.textContent = '✓✓';
-    startTimer(msgId, 300000);
+    startTimer(msgId, 120000);
   });
 
   socket.on('new_location', (msg) => {
@@ -486,7 +486,7 @@
     document.getElementById('messages').insertBefore(row, document.getElementById('typingIndicator'));
     msgMap[msg.id] = row;
     if (msg.readAt) {
-      const rem = 300000 - (Date.now() - msg.readAt);
+      const rem = 120000 - (Date.now() - msg.readAt);
       if (rem > 0) startTimer(msg.id, rem);
     }
   }
