@@ -218,6 +218,29 @@
   .btn-pdf:active { transform: scale(0.93); }
   .btn-pdf svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   body.waiting .btn-pdf, body.both-online .btn-pdf { background: #111; border-color: #2a2a2a; color: #666; }
+
+  .attach-wrap { position: relative; flex-shrink: 0; }
+  .btn-attach { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: var(--text-dim); }
+  .btn-attach:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+  .btn-attach:active { transform: scale(0.93); }
+  .btn-attach svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; transition: transform 0.2s; }
+  .btn-attach.open svg { transform: rotate(45deg); }
+  .btn-attach.open { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+  .btn-attach.loading { animation: locPulse 1s ease-in-out infinite; border-color: #22c55e; color: #22c55e; }
+  body.waiting .btn-attach, body.both-online .btn-attach { background: #111; border-color: #2a2a2a; color: #666; }
+
+  .attach-menu { position: absolute; bottom: 52px; left: 0; background: var(--bg); border: 1.5px solid var(--border); border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,0.18); padding: 6px; display: none; flex-direction: column; gap: 2px; min-width: 164px; z-index: 50; }
+  .attach-menu.show { display: flex; animation: attachPop 0.14s ease; }
+  @keyframes attachPop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .attach-item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 12px; border: none; background: transparent; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); font-family: inherit; text-align: left; transition: background 0.12s; }
+  .attach-item:hover { background: rgba(99,102,241,0.1); }
+  .attach-item:active { transform: scale(0.97); }
+  .attach-ico { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+  .attach-ico svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .attach-ico.ico-img { background: #eff6ff; color: #3b82f6; }
+  .attach-ico.ico-pdf { background: #fef2f2; color: #ef4444; }
+  .attach-ico.ico-loc { background: #f0fdf4; }
+
   .pdf-bubble { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; max-width: 240px; }
   .pdf-bubble .pdf-ico { width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px; background: #ef4444; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
   .pdf-bubble .pdf-info { min-width: 0; }
@@ -300,13 +323,25 @@
 </div>
 
 <div class="input-area">
-  <button class="btn-image" onclick="document.getElementById('imgInput').click()" title="Allega">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-  </button>
-  <button class="btn-pdf" onclick="document.getElementById('pdfInput').click()" title="Allega PDF">
-    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-  </button>
-  <button class="btn-location" id="locBtn" onclick="shareLocation()" title="Condividi posizione">📍</button>
+  <div class="attach-wrap">
+    <button class="btn-attach" id="attachBtn" onclick="toggleAttachMenu(event)" title="Allega">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <div class="attach-menu" id="attachMenu">
+      <button class="attach-item" onclick="pickAttach('img')">
+        <span class="attach-ico ico-img"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+        <span>Immagine</span>
+      </button>
+      <button class="attach-item" onclick="pickAttach('pdf')">
+        <span class="attach-ico ico-pdf"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+        <span>PDF</span>
+      </button>
+      <button class="attach-item" onclick="pickAttach('loc')">
+        <span class="attach-ico ico-loc">📍</span>
+        <span>Posizione</span>
+      </button>
+    </div>
+  </div>
   <input type="file" id="imgInput" accept="image/*" onchange="handleImageSelect(event)">
   <input type="file" id="pdfInput" accept="application/pdf" onchange="handlePdfSelect(event)">
   <textarea id="msgInput" placeholder="Scrivi un messaggio…" rows="1"
@@ -495,13 +530,13 @@
     } else if (msg.type === 'pdf') {
       const nm = escHtml(msg.fileName || 'documento.pdf');
       const sz = msg.fileSize ? fmtSize(msg.fileSize) : 'PDF';
-      bubbleContent = `<a class="pdf-bubble" href="${msg.base64}" download="${nm}" onclick="event.stopPropagation()">
+      bubbleContent = `<span class="pdf-bubble" role="button" onclick="event.stopPropagation(); downloadPdf('${msg.id}')">
         <span class="pdf-ico">PDF</span>
         <span class="pdf-info">
           <span class="pdf-name">${nm}</span>
-          <span class="pdf-size">${sz}</span>
+          <span class="pdf-size">${sz} · tocca per aprire</span>
         </span>
-      </a>`;
+      </span>`;
     } else {
       bubbleContent = escHtml(msg.text || '');
     }
@@ -556,10 +591,32 @@
     document.getElementById('replyBar').classList.remove('show');
   }
 
+  // ── Menu allegati (+) ───────────────────────────────────────────────────────
+  function toggleAttachMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('attachMenu');
+    const btn  = document.getElementById('attachBtn');
+    const open = menu.classList.toggle('show');
+    btn.classList.toggle('open', open);
+  }
+  function closeAttachMenu() {
+    document.getElementById('attachMenu').classList.remove('show');
+    document.getElementById('attachBtn').classList.remove('open');
+  }
+  function pickAttach(kind) {
+    closeAttachMenu();
+    if (kind === 'img') document.getElementById('imgInput').click();
+    else if (kind === 'pdf') document.getElementById('pdfInput').click();
+    else if (kind === 'loc') shareLocation();
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.attach-wrap')) closeAttachMenu();
+  });
+
   // ── Condividi posizione GPS ─────────────────────────────────────────────────
   function shareLocation() {
     if (!navigator.geolocation) { alert('GPS non supportato da questo browser.'); return; }
-    const btn = document.getElementById('locBtn');
+    const btn = document.getElementById('attachBtn');
     btn.classList.add('loading');
     btn.style.pointerEvents = 'none';
 
@@ -598,6 +655,46 @@
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
     return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  // Converte un data URL in Blob (i data URL grandi non si scaricano bene,
+  // soprattutto su mobile: il Blob + object URL è affidabile ovunque)
+  function dataUrlToBlob(dataUrl) {
+    const [header, b64] = dataUrl.split(',');
+    const mime = (header.match(/:(.*?);/) || [,'application/octet-stream'])[1];
+    const bin = atob(b64);
+    const len = bin.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
+
+  function downloadPdf(msgId) {
+    const msg = msgDataMap[msgId];
+    if (!msg || !msg.base64) { alert('Il file non è più disponibile.'); return; }
+    let url;
+    try {
+      const blob = dataUrlToBlob(msg.base64);
+      url = URL.createObjectURL(blob);
+    } catch (e) {
+      alert('Impossibile aprire il PDF.');
+      return;
+    }
+    const fileName = msg.fileName || 'documento.pdf';
+    // iOS Safari ignora l'attributo download: in quel caso apriamo in una nuova
+    // scheda (il viewer PDF permette comunque di salvare/condividere)
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+    if (isIOS) {
+      window.open(url, '_blank');
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   // ── Gestione PDF (nessuna compressione: inviato come data URL) ───────────────
