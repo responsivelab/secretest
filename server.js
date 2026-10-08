@@ -226,6 +226,31 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── PDF ──────────────────────────────────────────────────────────────────
+  socket.on('send_pdf', (data) => {
+    if (!checkLive()) return;
+    if (!data.base64 || typeof data.base64 !== 'string') return;
+    if (data.base64.length > 20 * 1024 * 1024) return;
+    if (!data.base64.startsWith('data:application/pdf')) return;
+    const fileName = (data.fileName || 'documento.pdf').toString().trim().substring(0, 120);
+    const fileSize = Number(data.fileSize) || null;
+    const msgId = crypto.randomBytes(16).toString('hex');
+    const msg = {
+      id: msgId, type: 'pdf', from: userId, fromName: userName,
+      base64: data.base64, fileName, fileSize,
+      replyTo: data.replyTo || null, timestamp: Date.now(), readAt: null
+    };
+    messages.push(msg);
+    io.emit('new_message', sanitizeMsg(msg));
+    const otherId = Object.keys(USERS).find(k => k !== userId);
+    if (connectedSockets[otherId]) {
+      markMessageRead(msgId);
+    } else {
+      // Altro non connesso: max 10 min poi elimina comunque
+      deleteTimers[msgId] = setTimeout(() => deleteMessage(msgId), 600000);
+    }
+  });
+
   // ── Segna letto ────────────────────────────────────────────────────────────
   socket.on('mark_read', (data) => {
     if (!data.msgId) return;
@@ -277,7 +302,7 @@ function markMessageRead(msgId) {
   msg.readAt = Date.now();
   io.emit('message_read', { msgId, readAt: msg.readAt });
 
-  if (msg.type === 'image' || msg.type === 'location') {
+  if (msg.type === 'image' || msg.type === 'location' || msg.type === 'pdf') {
     // Libera subito la RAM (base64 pesante) — il browser ce l'ha già
     if (msg.base64) msg.base64 = null;
     // Bolla visiva: 1 minuto
@@ -298,6 +323,7 @@ function sanitizeMsg(m) {
   return {
     id: m.id, type: m.type, from: m.from, fromName: m.fromName,
     text: m.text || null, base64: m.base64 || null,
+    fileName: m.fileName || null, fileSize: m.fileSize || null,
     lat: m.lat || null, lng: m.lng || null,
     replyTo: m.replyTo || null, timestamp: m.timestamp, readAt: m.readAt
   };
